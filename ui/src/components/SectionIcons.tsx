@@ -73,12 +73,12 @@ export function LayersIcon(p: Props) {
   );
 }
 
-/** About: a small decanter, the app's own mark. */
+/** About: the app's own mark, a D whose stem stands apart from its bowl. */
 export function DecanterIcon(p: Props) {
   return (
     <Frame {...p}>
-      <path d="M6.2 15.2c.9-.5 1.9.4 2.9 0s2-.4 2.9 0 2 .4 2.9 0 2-.5 2.9 0c.2 3-3 5.6-5.8 5.6s-6-2.6-5.8-5.6Z" fill="var(--tint)" stroke="none" />
-      <path d="M10.6 3h2.8M11 3v4.9c0 .6-.3 1.1-.8 1.4-3 1.7-5 3.6-5 6.4 0 3.2 3.1 5.5 6.8 5.5s6.8-2.3 6.8-5.5c0-2.8-2-4.7-5-6.4-.5-.3-.8-.8-.8-1.4V3" />
+      <path d="M5.5 5v14" strokeWidth={2.4} />
+      <path d="M10.2 5.2h2.2a6.8 6.8 0 0 1 0 13.6h-2.2" fill="var(--tint)" strokeWidth={2.4} />
     </Frame>
   );
 }

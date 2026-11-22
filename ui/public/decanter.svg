@@ -1,21 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="wine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#c2305a"/>
-      <stop offset="1" stop-color="#5e0f24"/>
-    </linearGradient>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#1d1d23"/>
-      <stop offset="1" stop-color="#101014"/>
+      <stop offset="1" stop-color="#0e0e12"/>
     </linearGradient>
-    <clipPath id="bulb">
-      <path d="M232 112H280V236C280 250 292 258 308 266C378 300 420 334 420 370C420 414 348 440 256 440C164 440 92 414 92 370C92 334 134 300 204 266C220 258 232 250 232 236Z"/>
-    </clipPath>
+    <linearGradient id="wine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0607f"/>
+      <stop offset="1" stop-color="#8e1b3a"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3e9ec"/>
+      <stop offset="1" stop-color="#c9b8be"/>
+    </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <rect x="80" y="318" width="352" height="140" fill="url(#wine)" clip-path="url(#bulb)"/>
-  <path d="M80 318C128 304 168 332 216 318C264 304 304 332 352 318C384 309 408 316 432 318" fill="none" stroke="#e0607f" stroke-width="6" stroke-linecap="round" clip-path="url(#bulb)" opacity="0.85"/>
-  <path d="M232 112H280V236C280 250 292 258 308 266C378 300 420 334 420 370C420 414 348 440 256 440C164 440 92 414 92 370C92 334 134 300 204 266C220 258 232 250 232 236Z" fill="none" stroke="#ece4e7" stroke-width="14" stroke-linejoin="round"/>
-  <path d="M244 72C244 60 268 60 268 72V112H244Z" fill="#ece4e7"/>
-  <circle cx="256" cy="66" r="18" fill="#ece4e7"/>
+  <!-- The stem: an I, standing on its own. -->
+  <rect x="124" y="120" width="56" height="272" rx="28" fill="url(#stem)"/>
+  <!-- The bowl: a backwards C, detached from the stem. -->
+  <path d="M226 148H254A108 108 0 0 1 254 364H226" fill="none" stroke="url(#wine)" stroke-width="56" stroke-linecap="round"/>
 </svg>
