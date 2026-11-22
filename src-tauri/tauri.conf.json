@@ -3,7 +3,7 @@
   "productName": "Decanter",
   "mainBinaryName": "decanter",
   "version": "0.1.0",
-  "identifier": "io.github.singularity8007.decanter",
+  "identifier": "io.github.singularity800777.decanter",
   "build": {
     "frontendDist": "../ui/dist",
     "devUrl": "http://localhost:5173",
