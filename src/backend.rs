@@ -1,7 +1,8 @@
 //! The only thing the window talks to.
 //!
-//! The GUI calls `launch()`, `install_game()` and `check_updates()` and draws
-//! whatever `view()` returns. Everything else (threads, downloads, play time,
+//! The GUI calls `launch()`, `install_game()` and `check_updates()`, reads and
+//! saves the settings, and draws whatever `view()` returns. Everything else
+//! (threads, downloads, play time,
 //! the wording of messages, deciding whether a launch "failed") lives here or
 //! further back, so no logic is duplicated between the two sides.
 
@@ -9,6 +10,7 @@ use crate::config::Config;
 use crate::installer::GameStatus;
 use crate::playtime::{self, PlayStats};
 use crate::progress::Progress;
+use crate::settings::{self, Field, Toggle};
 use crate::{downloader, installer, launch_chain};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, Mutex};
@@ -22,17 +24,17 @@ const EARLY_EXIT: Duration = Duration::from_secs(30);
 // ---- Messages shown to the player. Kept gentle: say what probably happened
 // and what to try, and keep the technical text for the "details" line. ----
 
-const NOT_READY: &str = "ZZZ isn't ready to play yet. Press \"Install game\" first. \
+const NOT_READY: &str = "ZZZ isn't ready to play yet. Press \"Install/Update ZZZ\" first. \
 If you already did and it got interrupted, press it again to resume your download.";
 
 const LAUNCH_FAILED: &str = "ZZZ didn't start this time. HoYo's servers may just be slow to answer. \
 Check your internet connection, or press \"Check for updates\", then try again.";
 
 const INSTALL_FAILED: &str = "ZZZ didn't finish downloading. Nothing is lost. \
-Check your internet connection, then press \"Install game\" again and it will carry on from where it stopped.";
+Check your internet connection, then press \"Install/Update ZZZ\" again and it will carry on from where it stopped.";
 
 const NO_DISK_SPACE: &str = "There isn't enough free disk space for this yet. \
-Free up some space, then press \"Install game\" again.";
+Free up some space, then press \"Install/Update ZZZ\" again.";
 
 const UPDATE_FAILED: &str = "Couldn't check for updates just now. This usually means the connection dropped. \
 Check your internet and try again in a moment.";
@@ -114,14 +116,13 @@ impl Backend {
     /// Install ZZZ, or bring an existing install up to the latest version.
     /// Only changed files are downloaded.
     pub fn install_game(&self) {
-        println!("I am installing game in backend/install_game");
         self.start(|cfg, progress| {
             installer::ensure_game(&cfg.game_dir, progress).map_err(|e| {
                 let details = format!("{e:#}");
                 let text = if details.contains("not enough disk space") {
                     NO_DISK_SPACE
                 } else {
-                    INSTALL_FAILED      
+                    INSTALL_FAILED
                 };
                 Failure::with_details(text, details)
             })?;
@@ -133,21 +134,21 @@ impl Backend {
     /// a newer version (without downloading it).
     pub fn check_updates(&self) {
         self.start(|cfg, progress| {
-            downloader::update_all(cfg, progress)   
+            downloader::update_all(cfg, progress)
                 .map_err(|e| Failure::with_details(UPDATE_FAILED, format!("{e:#}")))?;
             let game = match installer::check(&cfg.game_dir, progress) {
                 Ok(GameStatus::UpToDate) => "ZZZ is up to date.".to_string(),
-                Ok(GameStatus::UpdateAvailable) => "A new ZZZ version is out! Press \"Play\" to join ZZZ so it can update."
+                Ok(GameStatus::UpdateAvailable) => "A new ZZZ version is out! Press \"Install/Update ZZZ\" to download it."
                     .to_string(),
                 Ok(GameStatus::NotInstalled) => {
-                    "ZZZ isn't installed yet. Press \"Install/Update game\" to get started."
+                    "ZZZ isn't installed yet. Press \"Install/Update ZZZ\" to get started."
                         .to_string()
                 }
                 // Offline or HoYo down: not a failure of the runtime update.
                 Err(_) => "Couldn't check ZZZ just now. Try again in a moment.".to_string(),
             };
             Ok(format!(
-                "GE-Proton and the Steam Linux Runtime are up to date.\n{game}"
+                "Proton and the Steam Linux Runtime are up to date.\n{game}"
             ))
         });
     }
@@ -156,10 +157,29 @@ impl Backend {
     pub fn launch(&self) {
         let stats = Arc::clone(&self.stats);
         self.start(move |cfg, progress| {
-            // Also false while an install or update is unfinished, so a
-            // half-updated game is never started.
-            if !installer::is_complete(&cfg.game_dir) || !launch_chain::is_ready(cfg) {
+            // The only check: false while an install or update is unfinished,
+            // so a half-updated game is never started. Paths are hardcoded and
+            // not checked here; if one is missing, the launch itself fails.
+            if !installer::is_complete(&cfg.game_dir) {
                 return Err(Failure::plain(NOT_READY));
+            }
+            // Out of the box: if the pinned GE-Proton / Steam Runtime pair
+            // isn't installed yet (first run, or an older launcher left
+            // GE-Proton11 + SLR4 behind), fetch it now instead of asking.
+            if !downloader::runtime_ready(cfg) {
+                progress.set_label(format!(
+                    "Getting {} and the Steam Linux Runtime (one time only)...",
+                    downloader::GE_TAG
+                ));
+                downloader::update_all(cfg, progress)
+                    .map_err(|e| Failure::with_details(UPDATE_FAILED, format!("{e:#}")))?;
+                if !downloader::runtime_ready(cfg) {
+                    return Err(Failure::with_details(
+                        UPDATE_FAILED,
+                        format!("{} or the Steam Linux Runtime is still missing", downloader::GE_TAG),
+                    ));
+                }
+                progress.reset();
             }
             progress.set_label("ZZZ is running. Have fun!");
             let started = Instant::now();
@@ -178,6 +198,59 @@ impl Backend {
                 Err(e) => Err(Failure::with_details(LAUNCH_FAILED, format!("{e:#}"))),
             }
         });
+    }
+
+    /// The path in use right now for one box on the settings page.
+    pub fn path_in_use(&self, field: Field) -> String {
+        self.cfg.path(field).display().to_string()
+    }
+
+    /// Save a path the player typed. Called on every keystroke, so closing the
+    /// launcher never loses a change. It takes effect the next time the
+    /// launcher starts, because the running launcher already loaded its paths.
+    pub fn set_path(&self, field: Field, path: &str) {
+        if !field.editable() {
+            return;
+        }
+        let mut saved = settings::load(&self.cfg.settings_path);
+        saved.set(field, path);
+        // Nothing else depends on this write, so a failure isn't worth a popup.
+        let _ = settings::save(&self.cfg.settings_path, &saved);
+    }
+
+    /// A launch switch as it is in use right now.
+    pub fn flag_in_use(&self, toggle: Toggle) -> bool {
+        self.cfg.flag(toggle)
+    }
+
+    /// The FPS cap in use right now, "" for none.
+    pub fn fps_cap_in_use(&self) -> String {
+        match self.cfg.fps_cap {
+            0 => String::new(),
+            n => n.to_string(),
+        }
+    }
+
+    /// Save a launch switch. Takes effect the next time the launcher starts.
+    pub fn set_flag(&self, toggle: Toggle, on: bool) {
+        let mut saved = settings::load(&self.cfg.settings_path);
+        saved.set_flag(toggle, on);
+        let _ = settings::save(&self.cfg.settings_path, &saved);
+    }
+
+    /// Save the FPS cap the player typed. Empty or 0 = no cap; anything that
+    /// isn't a number is ignored.
+    pub fn set_fps_cap(&self, typed: &str) {
+        let typed = typed.trim();
+        let cap = if typed.is_empty() { 0 } else {
+            match typed.parse::<u32>() {
+                Ok(n) => n,
+                Err(_) => return,
+            }
+        };
+        let mut saved = settings::load(&self.cfg.settings_path);
+        saved.set_fps_cap(cap);
+        let _ = settings::save(&self.cfg.settings_path, &saved);
     }
 
     /// The player closed the error popup.

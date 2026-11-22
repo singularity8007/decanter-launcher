@@ -297,7 +297,7 @@ fn sync(plan: &Plan, dest: &Path, progress: &Progress) -> Result<()> {
     });
 
     if let Some(e) = failed.into_inner().unwrap() {
-        return Err(e.context("stopped; press Install game again to continue where it left off"));
+        return Err(e.context("stopped; press Install/Update ZZZ again to continue where it left off"));
     }
 
     // Step 5: delete files the old version had and the new one dropped. Only

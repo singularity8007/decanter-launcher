@@ -10,6 +10,7 @@
 /steamrt/
 /prefix/
 /playtime.json
+/settings.json
 
 # Local testing
 /test/

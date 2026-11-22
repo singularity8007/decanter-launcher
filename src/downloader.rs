@@ -12,6 +12,30 @@ use xz2::read::XzDecoder;
 
 const MAX_ATTEMPTS: u32 = 3;
 
+/// The GE-Proton release ZZZ is known to run smoothly on: the exact one
+/// TwintailLauncher uses on this machine. Pinned on purpose: "latest"
+/// (GE-Proton11, DXVK 3) is what made the game choppy.
+pub const GE_TAG: &str = "GE-Proton10-34";
+
+/// GE-Proton10 needs Steam Linux Runtime 3 "sniper" (its toolmanifest asks
+/// for app 1628350), the same runtime Twintail launches ZZZ through.
+const STEAMRT_BASE: &str = "https://repo.steampowered.com/steamrt3/images/latest-public-beta";
+const STEAMRT_ARCHIVE: &str = "SteamLinuxRuntime_sniper.tar.xz";
+
+/// True when the pinned GE-Proton and the sniper runtime are both installed,
+/// checked from local files only (no network).
+pub fn runtime_ready(cfg: &Config) -> bool {
+    let ge_ok = fs::read_to_string(cfg.runner_dir.join("version"))
+        .is_ok_and(|v| v.split_whitespace().any(|w| w == GE_TAG))
+        && cfg.runner_dir.join("proton").exists()
+        && read_record(&cfg.runner_dir).is_some();
+    let rt_ok = cfg.entry_point().exists()
+        && fs::read_to_string(cfg.steamrt_dir.join("VERSIONS.txt"))
+            .is_ok_and(|v| v.contains("sniper"))
+        && read_record(&cfg.steamrt_dir).is_some();
+    ge_ok && rt_ok
+}
+
 /// How long to wait for a server to start answering once we're connected.
 /// Without this, a server that accepts the connection and then goes silent
 /// would hang us forever. It only limits the wait for the reply to begin, so
@@ -42,7 +66,7 @@ pub fn update_all(cfg: &Config, progress: &Progress) -> Result<()> {
         .or_else(|e| use_installed_copy("Steam Linux Runtime", &cfg.steamrt_dir, e, progress))?;
 
     // Building the GE-Proton package needs the network (to learn the latest tag).
-    progress.set_label("Checking GE-Proton...");
+    progress.set_label(format!("Checking {GE_TAG}..."));
     ge_proton_package(cfg)
         .and_then(|pkg| ensure(&agent, &pkg, progress))
         .or_else(|e| use_installed_copy("GE-Proton", &cfg.runner_dir, e, progress))
@@ -67,54 +91,27 @@ fn use_installed_copy(
 }
 
 fn steamrt_package(cfg: &Config) -> Package {
-    // Valve's latest-public-beta branch, the same one TwintailLauncher uses.
-    const BASE: &str = "https://repo.steampowered.com/steamrt4/images/latest-public-beta";
     Package {
         name: "Steam Linux Runtime",
         dest: cfg.steamrt_dir.clone(),
-        archive_name: "SteamLinuxRuntime_4.tar.xz".into(),
-        archive_url: format!("{BASE}/SteamLinuxRuntime_4.tar.xz"),
-        hash_url: format!("{BASE}/SHA256SUMS"),
+        archive_name: STEAMRT_ARCHIVE.into(),
+        archive_url: format!("{STEAMRT_BASE}/{STEAMRT_ARCHIVE}"),
+        hash_url: format!("{STEAMRT_BASE}/SHA256SUMS"),
     }
 }
 
 fn ge_proton_package(cfg: &Config) -> Result<Package> {
-    let tag = latest_ge_tag()?;
+    let tag = GE_TAG;
     let base = format!("https://github.com/GloriousEggroll/proton-ge-custom/releases/download/{tag}");
-    let archive_name = format!("{tag}-x86_64.tar.gz");
+    // GE-Proton10 archives have no "-x86_64" suffix (GE-Proton11 added it).
+    let archive_name = format!("{tag}.tar.gz");
     Ok(Package {
         name: "GE-Proton",
         dest: cfg.runner_dir.clone(),
         archive_url: format!("{base}/{archive_name}"),
-        hash_url: format!("{base}/{tag}-x86_64.sha512sum"),
+        hash_url: format!("{base}/{tag}.sha512sum"),
         archive_name,
     })
-}
-
-/// Ask GitHub which release is the latest. `releases/latest` redirects to
-/// `.../releases/tag/<tag>`, so we don't follow the redirect and read the
-/// tag off its Location header. That avoids the rate-limited API.
-fn latest_ge_tag() -> Result<String> {
-    let config = ureq::Agent::config_builder()
-        .max_redirects(0)
-        .timeout_connect(Some(Duration::from_secs(15)))
-        .timeout_recv_response(Some(REPLY_TIMEOUT))
-        .build();
-    let agent = ureq::Agent::new_with_config(config);
-
-    let response = agent
-        .get("https://github.com/GloriousEggroll/proton-ge-custom/releases/latest")
-        .call()?;
-    let location = response
-        .headers()
-        .get("location")
-        .context("GitHub sent no redirect for the latest release")?
-        .to_str()?;
-    location
-        .rsplit('/')
-        .next()
-        .map(str::to_string)
-        .context("could not read the release tag")
 }
 
 /// Bring `pkg` up to date: skip if the recorded hash matches the latest
@@ -267,4 +264,22 @@ fn extract(archive: &Path, dest: &Path) -> Result<()> {
         entry.unpack(&out)?;
     }
     Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Real network install of the pinned runtime, exactly what Play does
+    /// when it's missing. `cargo test install_runtime -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn install_runtime() {
+        let cfg = Config::hardcoded().unwrap();
+        println!("ready before: {}", runtime_ready(&cfg));
+        let progress = Progress::default();
+        update_all(&cfg, &progress).unwrap();
+        println!("notes: {:?}", progress.take_notes());
+        assert!(runtime_ready(&cfg), "runtime not ready after install");
+        println!("ready after: true");
+    }
 }
