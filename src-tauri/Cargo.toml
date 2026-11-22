@@ -1,6 +1,6 @@
 [package]
 name = "decanter"
-description = "Pick a game, pick a Proton, play."
+description = "Made out of spite"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

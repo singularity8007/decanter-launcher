@@ -194,7 +194,7 @@ function About() {
     <div className="animate-fade-in flex flex-col items-center pt-10 text-center">
       <img src="/decanter.svg" alt="" className="h-24 w-24 drop-shadow-[0_10px_30px_rgba(194,48,90,0.35)]" />
       <h2 className="mt-5 text-3xl font-bold tracking-tight">Decanter</h2>
-      <p className="mt-1 text-muted">Pick a game, pick a Proton, play.</p>
+      <p className="mt-1 text-muted">Made out of spite</p>
       {info && <p className="mt-3 font-mono text-sm text-faint">v{info.version}</p>}
       <div className="mt-8 flex gap-3">
         {info && (
