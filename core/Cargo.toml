@@ -1,0 +1,29 @@
+[package]
+name = "decanter-core"
+description = "Game, Proton and Steam Runtime management behind the Decanter launcher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+log = "0.4"
+chrono = "0.4.45"
+flate2 = "1.1.10"
+md-5 = "0.10"
+nix = { version = "0.31.1", features = ["fs"] }
+prost = "0.14.4"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.10"
+tar = "0.4.46"
+ureq = "3.4.2"
+liblzma = { version = "0.4", features = ["static"] }
+zstd = "0.14.0"
+# Download engine for Kuro (Wuthering Waves) and zipped (Arknights: Endfield)
+# games. Pinned to an exact commit so a push upstream can't change our builds.
+fischl = { git = "https://github.com/TwintailTeam/fischl-rs", rev = "55af0095d5032fa93cc692fa926b6a373ad86002", default-features = false, features = ["download"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+
+[dev-dependencies]
+tempfile = "3"

@@ -1,6 +1,6 @@
 //! Total play time and the last-played date, kept in a small JSON file.
 //!
-//! Time only counts while ZZZ is running *and* this launcher is open, because
+//! Time only counts while the game is running *and* Decanter is open, because
 //! the launcher is what notices the game starting and stopping.
 
 use chrono::{Local, NaiveDate};
@@ -54,7 +54,7 @@ impl PlayStats {
         }
     }
 
-    /// ZZZ was just launched: stamp today's date and start counting.
+    /// The game was just launched: stamp today's date and start counting.
     pub fn start_session(&self) -> Session<'_> {
         self.saved.lock().unwrap().last_played =
             Some(Local::now().format("%Y-%m-%d").to_string());
@@ -93,7 +93,7 @@ impl PlayStats {
         Duration::from_secs(self.saved.lock().unwrap().total_seconds) + live
     }
 
-    /// The last launch date as "Oct 1, 2026", or None if ZZZ was never launched.
+    /// The last launch date as "Oct 1, 2026", or None if never launched.
     pub fn last_played(&self) -> Option<String> {
         let saved = self.saved.lock().unwrap();
         let date =
@@ -118,7 +118,7 @@ impl PlayStats {
         let text = serde_json::to_string_pretty(&*self.saved.lock().unwrap());
         // Play time is nice to have; never worth failing anything over.
         if let Ok(text) = text {
-            let _ = fs::write(&self.path, text);
+            let _ = crate::paths::write_atomic(&self.path, text.as_bytes());
         }
     }
 }
