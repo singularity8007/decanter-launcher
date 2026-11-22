@@ -1,9 +1,9 @@
 [workspace]
-members = ["core"]
+members = ["core", "src-tauri"]
 resolver = "3"
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/hamza/decanter"
+repository = "https://github.com/singularity8007/wine_launcher"

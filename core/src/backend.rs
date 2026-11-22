@@ -300,6 +300,11 @@ impl Backend {
                 bail!("odd runner name {r:?}");
             }
         }
+        // Refuse before touching installs.json, so a refused install never
+        // leaves a half-made entry behind.
+        if self.is_busy() {
+            bail!("another task is still running");
+        }
         let paths = &self.inner.paths;
         self.update_state(|s| {
             let install = match s.get(game).cloned() {

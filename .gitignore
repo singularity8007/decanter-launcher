@@ -15,3 +15,11 @@
 # Local testing
 /test/
 /python_launcher/
+
+# Decanter UI
+/ui/node_modules/
+/ui/dist/
+/src-tauri/gen/
+
+# Screen recordings
+*.webm

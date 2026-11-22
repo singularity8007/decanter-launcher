@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+@theme {
+  /* Greys, darkest first. */
+  --color-ink-950: #0b0b0e;
+  --color-ink-900: #111115;
+  --color-ink-850: #15151a;
+  --color-ink-800: #1a1a20;
+  --color-ink-750: #202027;
+  --color-ink-700: #27272f;
+  --color-ink-600: #33333d;
+  --color-ink-500: #4a4a56;
+
+  --color-fg: #ececf1;
+  --color-muted: #a1a1ae;
+  --color-faint: #6e6e7a;
+
+  /* Wine red accent. */
+  --color-wine-200: #f7c6d2;
+  --color-wine-300: #ef9bb0;
+  --color-wine-400: #e0607f;
+  --color-wine-500: #c2305a;
+  --color-wine-600: #a3234a;
+  --color-wine-700: #7e1a39;
+  --color-wine-800: #561127;
+  --color-wine-900: #2e0915;
+
+  --color-ok: #5fd39a;
+  --color-warn: #f0b45a;
+
+  --font-sans: "Inter", "Cantarell", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-ink-950);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    /* It's an app, not a document. Inputs opt back in below. */
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+  }
+  input,
+  textarea,
+  .selectable {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-wine-500) 55%, transparent);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-600) transparent;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-wine-400);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Frosted panel used over game art. */
+  .glass {
+    background: rgb(12 12 16 / 0.55);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+  /* Solid grey card used everywhere else. */
+  .card {
+    background: var(--color-ink-850);
+    border: 1px solid var(--color-ink-700);
+    border-radius: 14px;
+  }
+  .field {
+    width: 100%;
+    background: var(--color-ink-900);
+    border: 1px solid var(--color-ink-700);
+    border-radius: 10px;
+    padding: 9px 12px;
+    color: var(--color-fg);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field:focus {
+    border-color: var(--color-wine-500);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s,
+      opacity 0.15s,
+      transform 0.1s;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+  }
+  .btn-primary {
+    background: var(--color-wine-600);
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-wine-500);
+  }
+  .btn-ghost {
+    background: var(--color-ink-750);
+    border: 1px solid var(--color-ink-600);
+    color: var(--color-fg);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-ink-700);
+  }
+  .btn-danger {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--color-wine-400) 45%, transparent);
+    color: var(--color-wine-300);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-wine-500) 18%, transparent);
+  }
+  .label-caps {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out both;
+}
+
+@keyframes art-in {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-art-in {
+  animation: art-in 0.6s ease-out both;
+}
+
+@keyframes indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+.animate-indeterminate {
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
