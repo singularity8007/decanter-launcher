@@ -29,6 +29,9 @@ pub struct Install {
     /// Extra environment variables for this game only.
     #[serde(default)]
     pub env: BTreeMap<String, String>,
+    /// Keep this exact Proton build even when Proton auto-update is on.
+    #[serde(default)]
+    pub pin_runner: bool,
 }
 
 impl Install {
@@ -99,6 +102,7 @@ mod tests {
             voice: None,
             extra_args: String::new(),
             env: BTreeMap::new(),
+            pin_runner: false,
         }
     }
 

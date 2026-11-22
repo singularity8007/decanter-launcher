@@ -28,6 +28,7 @@ export default function GameSettings({ game, onClose, onSaved, onGetMoreProton }
   const [voice, setVoice] = useState(install.voice ?? "en-us");
   const [args, setArgs] = useState(install.extra_args);
   const [env, setEnv] = useState<[string, string][]>(Object.entries(install.env));
+  const [pinned, setPinned] = useState(install.pin_runner);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function GameSettings({ game, onClose, onSaved, onGetMoreProton }
         voice: game.publisher === "hoyoverse" ? voice : undefined,
         extra_args: args,
         env: Object.fromEntries(cleaned),
+        pin_runner: pinned,
       });
       onSaved();
       onClose();
@@ -86,6 +88,12 @@ export default function GameSettings({ game, onClose, onSaved, onGetMoreProton }
               </option>
             ))}
           </select>
+          <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm">
+            <input type="checkbox" className="h-4 w-4 accent-wine-500" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
+            <span>
+              Keep this Proton build <span className="text-muted">— skip Proton auto-update for this game</span>
+            </span>
+          </label>
           <button onClick={onGetMoreProton} className="mt-2 text-sm font-semibold text-wine-300 hover:text-wine-200">
             Get more Proton versions →
           </button>

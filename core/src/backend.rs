@@ -102,6 +102,8 @@ pub struct GameView {
     pub default_dir: PathBuf,
     /// The chosen Proton build is installed (else Play downloads it first).
     pub runner_installed: bool,
+    pub default_runner: &'static str,
+    pub components: &'static [&'static str],
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -137,6 +139,7 @@ pub struct InstallOptions {
     pub voice: Option<String>,
     pub extra_args: Option<String>,
     pub env: Option<BTreeMap<String, String>>,
+    pub pin_runner: Option<bool>,
 }
 
 #[derive(Clone)]
@@ -241,6 +244,8 @@ impl Backend {
                     notes: info.notes,
                     status,
                     runner_installed: install.as_ref().is_some_and(|i| runners::is_installed(&self.inner.paths, &i.runner)),
+                    default_runner: info.default_runner,
+                    components: info.components,
                     installed_version: built.as_deref().map(|b| games::version_of(b).to_string()),
                     latest_version: latest.map(|l| l.version.clone()),
                     download_size: latest.map(|l| l.download_size),
@@ -321,11 +326,12 @@ impl Backend {
                     game,
                     dir: dir.unwrap_or_else(|| paths.game_default_dir(game)),
                     prefix: paths.prefix_default_dir(game),
-                    runner: runner.unwrap_or_else(|| runners::DEFAULT_RUNNER.to_string()),
+                    runner: runner.unwrap_or_else(|| game.info().default_runner.to_string()),
                     graphics: None,
                     voice: None,
                     extra_args: String::new(),
                     env: BTreeMap::new(),
+                    pin_runner: false,
                 },
             };
             s.put(install);
@@ -355,7 +361,11 @@ impl Backend {
             } else if !games::is_complete(&install.dir) {
                 bail!("the install isn't finished yet; press Install to resume it");
             }
+            if b.inner.settings.lock().unwrap().auto_update_proton {
+                b.update_runner(game, progress);
+            }
             let (runner_dir, runtime) = b.prepare_runner(game, progress)?;
+            b.prepare_prefix(game, &runner_dir, runtime, progress)?;
             b.run_game(game, runner_dir, runtime, progress)
         })
     }
@@ -394,6 +404,9 @@ impl Backend {
             }
             if let Some(e) = opts.env {
                 install.env = e;
+            }
+            if let Some(p) = opts.pin_runner {
+                install.pin_runner = p;
             }
             Ok(())
         })
@@ -619,6 +632,73 @@ impl Backend {
         Ok((runner_dir, runtime))
     }
 
+    /// Proton auto-update: move the game to the newest stable build of its
+    /// Proton family. Never blocks playing: any failure leaves the current
+    /// build in place with a note. Pinned games and unknown builds are skipped.
+    fn update_runner(&self, game: GameId, progress: &Arc<Progress>) {
+        let Ok(install) = self.install_of(game) else { return };
+        if install.pin_runner {
+            return;
+        }
+        let Some(family) = Family::of_name(&install.runner) else { return };
+        progress.set_phase(Phase::Preparing);
+        progress.set_label(format!("Checking {} for updates", family.label()));
+        let paths = &self.inner.paths;
+        let newest = match runners::releases(&self.inner.agent, paths, family, false) {
+            Ok(list) => runners::newer_than(&list, &install.runner),
+            Err(e) => {
+                progress.note(format!("Couldn't check {} for updates ({e:#}).", family.label()));
+                return;
+            }
+        };
+        let Some(newest) = newest else { return };
+        if !runners::is_installed(paths, &newest.name) {
+            if let Err(e) = runners::install(&self.inner.agent, paths, &newest, progress) {
+                if progress.cancelled() {
+                    return;
+                }
+                progress.note(format!("{} couldn't be installed ({e:#}), so {} was kept.", newest.name, install.runner));
+                return;
+            }
+        }
+        let switched = self.update_state(|s| {
+            if let Some(i) = s.get_mut(game) {
+                i.runner = newest.name.clone();
+            }
+            Ok(())
+        });
+        match switched {
+            Ok(()) => progress.note(format!("Proton updated: {} now uses {} (was {}).", game.info().name, newest.name, install.runner)),
+            Err(e) => progress.note(format!("Couldn't switch to {} ({e:#}).", newest.name)),
+        }
+    }
+
+    /// One-time prefix setup before a launch: let Proton create the prefix,
+    /// install the game's Windows components, and apply WuWa's SDK patch.
+    fn prepare_prefix(&self, game: GameId, runner_dir: &PathBuf, runtime: Runtime, progress: &Arc<Progress>) -> Result<()> {
+        let install = self.install_of(game)?;
+        let info = game.info();
+        let missing = crate::components::missing(&install.prefix, info.components);
+        if !missing.is_empty() {
+            let settings = self.settings();
+            let launch = Launch {
+                install: &install,
+                runner_dir: runner_dir.clone(),
+                steamrt_dir: self.inner.paths.steamrt_dir(runtime),
+                reaper: &self.inner.paths.reaper,
+                settings: &settings,
+            };
+            progress.set_phase(Phase::Installing);
+            progress.set_label(format!("Setting up {}'s Wine prefix (one time only)", info.name));
+            launch.init_prefix()?;
+            crate::components::install(&self.inner.agent, &self.inner.paths, &install.prefix, runner_dir, info.components, progress)?;
+        }
+        if game == GameId::Wuwa && games::kuro::apply_channel_patch(&install.dir)? {
+            log::info!("applied the Kuro SDK channel patch");
+        }
+        Ok(())
+    }
+
     fn run_game(&self, game: GameId, runner_dir: PathBuf, runtime: Runtime, progress: &Progress) -> Result<String> {
         let install = self.install_of(game)?;
         let settings = self.settings();
@@ -711,11 +791,7 @@ fn cached_releases(paths: &Paths, family: Family) -> Vec<Release> {
     struct Cached {
         releases: Vec<Release>,
     }
-    let file = paths.cache_dir().join(match family {
-        Family::Ge => "releases-ge.json",
-        Family::Cachyos => "releases-cachyos.json",
-        Family::Em => "releases-em.json",
-    });
+    let file = paths.cache_dir().join(family.cache_file());
     std::fs::read(file).ok().and_then(|b| serde_json::from_slice::<Cached>(&b).ok()).map(|c| c.releases).unwrap_or_default()
 }
 
@@ -806,6 +882,7 @@ mod tests {
                 voice: None,
                 extra_args: String::new(),
                 env: BTreeMap::new(),
+                pin_runner: false,
             });
             Ok(())
         })

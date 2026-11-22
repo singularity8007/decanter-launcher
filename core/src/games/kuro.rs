@@ -202,6 +202,28 @@ pub fn install(plan: &Plan, build_id: &str, short: &str, dir: &Path, progress: &
     Ok(())
 }
 
+/// The Kuro SDK config inside the install.
+const KRSDK: &str = "Client/Binaries/Win64/ThirdParty/KrPcSdk_Global/KRSDKRes/KRSDK.bin";
+
+/// Switch the Kuro SDK to the channel that works under Wine/Proton
+/// (`KR_ChannelID=240` -> `205`, the same edit TwintailLauncher makes on
+/// Linux). Same length, so nothing else in the file moves. Idempotent; an
+/// update restores the original file, so this runs before every launch.
+/// Returns true if the file was changed.
+pub fn apply_channel_patch(dir: &Path) -> Result<bool> {
+    let path = dir.join(KRSDK);
+    let Ok(mut data) = std::fs::read(&path) else {
+        return Ok(false); // older or unusual build without the SDK file
+    };
+    let (from, to) = (b"KR_ChannelID=240", b"KR_ChannelID=205");
+    let Some(pos) = data.windows(from.len()).position(|w| w == from) else {
+        return Ok(false);
+    };
+    data[pos..pos + to.len()].copy_from_slice(to);
+    crate::paths::write_atomic(&path, &data).with_context(|| format!("patching {}", path.display()))?;
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -215,6 +237,18 @@ mod tests {
         ];
         assert_eq!(pick_cdn(&list), "https://b.example");
         assert_eq!(pick_cdn(&[]), FALLBACK_CDN);
+    }
+
+    #[test]
+    fn channel_patch_is_exact_and_idempotent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join(KRSDK);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, b"abc\nKR_ChannelID=240\nxyz").unwrap();
+        assert!(apply_channel_patch(tmp.path()).unwrap());
+        assert_eq!(std::fs::read(&path).unwrap(), b"abc\nKR_ChannelID=205\nxyz");
+        assert!(!apply_channel_patch(tmp.path()).unwrap());
+        assert!(!apply_channel_patch(&tmp.path().join("missing")).unwrap());
     }
 
     #[test]

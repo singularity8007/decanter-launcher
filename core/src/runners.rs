@@ -30,16 +30,24 @@ pub enum Family {
     Ge,
     Cachyos,
     Em,
+    Umu,
+    Twintail,
+    Wineland,
+    Plop,
 }
 
 impl Family {
-    pub const ALL: [Family; 3] = [Family::Ge, Family::Cachyos, Family::Em];
+    pub const ALL: [Family; 7] = [Family::Ge, Family::Cachyos, Family::Em, Family::Umu, Family::Twintail, Family::Wineland, Family::Plop];
 
     pub fn label(self) -> &'static str {
         match self {
             Family::Ge => "Proton GE",
             Family::Cachyos => "Proton CachyOS",
             Family::Em => "Proton EM",
+            Family::Umu => "UMU-Proton",
+            Family::Twintail => "Proton Twintail",
+            Family::Wineland => "Proton Wineland",
+            Family::Plop => "Proton Plop",
         }
     }
 
@@ -48,29 +56,43 @@ impl Family {
             Family::Ge => "GloriousEggroll/proton-ge-custom",
             Family::Cachyos => "CachyOS/proton-cachyos",
             Family::Em => "BananaWorks07/Proton",
+            Family::Umu => "Open-Wine-Components/umu-proton",
+            Family::Twintail => "TwintailTeam/proton-twintail",
+            Family::Wineland => "nanomatters/proton-salkim",
+            Family::Plop => "loathingKernel/Proton",
+        }
+    }
+
+    /// Folder-name prefix, also used to tell which family an install belongs to.
+    fn prefix(self) -> &'static str {
+        match self {
+            Family::Ge => "GE-Proton",
+            Family::Cachyos => "proton-cachyos-",
+            Family::Em => "proton-EM-",
+            Family::Umu => "UMU-Proton-",
+            Family::Twintail => "proton-twintail-",
+            Family::Wineland => "proton-wineland-",
+            Family::Plop => "proton-plop-",
         }
     }
 
     /// The folder name an install of `tag` gets. Unique across families.
     pub fn runner_name(self, tag: &str) -> String {
         match self {
-            Family::Ge => tag.to_string(),                  // GE-Proton10-34
-            Family::Cachyos => format!("proton-{tag}"),     // proton-cachyos-11.0-20261015-slr
-            Family::Em => format!("proton-{tag}"),          // proton-EM-10.0-37-HDR
+            // Tags already carry the family name: GE-Proton10-34, UMU-Proton-11.0-2e.
+            Family::Ge | Family::Umu => tag.to_string(),
+            // cachyos-11.0-…, EM-10.0-37-HDR, twintail-11.0-…, wineland-11.0-…, plop-11.0-…
+            _ => format!("proton-{tag}"),
         }
     }
 
     /// Which family an installed folder name belongs to, if any.
     pub fn of_name(name: &str) -> Option<Family> {
-        if name.starts_with("GE-Proton") {
-            Some(Family::Ge)
-        } else if name.starts_with("proton-cachyos") {
-            Some(Family::Cachyos)
-        } else if name.starts_with("proton-EM") {
-            Some(Family::Em)
-        } else {
-            None
-        }
+        Family::ALL.into_iter().find(|f| name.starts_with(f.prefix()))
+    }
+
+    pub fn cache_file(self) -> String {
+        format!("releases-{}.json", serde_json::to_value(self).ok().and_then(|v| v.as_str().map(str::to_string)).unwrap_or_default())
     }
 }
 
@@ -136,11 +158,7 @@ struct CachedList {
 /// Published builds for `family`, newest first. Served from a 30-minute disk
 /// cache; if GitHub can't be reached, an older cached list is used instead.
 pub fn releases(agent: &ureq::Agent, paths: &Paths, family: Family, force: bool) -> Result<Vec<Release>> {
-    let cache = paths.cache_dir().join(match family {
-        Family::Ge => "releases-ge.json",
-        Family::Cachyos => "releases-cachyos.json",
-        Family::Em => "releases-em.json",
-    });
+    let cache = paths.cache_dir().join(family.cache_file());
     let cached: Option<CachedList> = fs::read(&cache).ok().and_then(|b| serde_json::from_slice(&b).ok());
     if !force {
         if let Some(c) = &cached {
@@ -167,14 +185,16 @@ pub fn releases(agent: &ureq::Agent, paths: &Paths, family: Family, force: bool)
 /// Pick the x86_64 Linux tarball out of a release, plus how to verify it.
 fn to_release(family: Family, r: GhRelease) -> Option<Release> {
     let is_tarball = |n: &str| n.ends_with(".tar.gz") || n.ends_with(".tar.xz");
+    // Other CPUs and optimised variants (arm64, x86_64_v3/v4, wow64) are skipped:
+    // the plain x86_64 build runs everywhere.
     let other_arch = |n: &str| {
         let n = n.to_ascii_lowercase();
-        n.contains("arm64") || n.contains("aarch64") || n.contains("x86_64_v")
+        n.contains("arm64") || n.contains("aarch64") || n.contains("x86_64_") || n.contains("wow64")
     };
     let candidates: Vec<&GhAsset> = r.assets.iter().filter(|a| is_tarball(&a.name) && !other_arch(&a.name)).collect();
     let asset = candidates
         .iter()
-        .find(|a| a.name.contains("x86_64"))
+        .find(|a| a.name.ends_with("-x86_64.tar.gz") || a.name.ends_with("-x86_64.tar.xz"))
         .or_else(|| (candidates.len() == 1).then(|| &candidates[0]))?;
     let asset = (*asset).clone();
     let sha256 = asset
@@ -367,6 +387,46 @@ mod tests {
         let r = to_release(Family::Em, rel("EM-10.0-37-HDR", vec![asset("proton-EM-10.0-37-HDR.tar.xz", None), asset("proton-EM-10.0-37-HDR.sha256sum", None)])).unwrap();
         assert_eq!(r.name, "proton-EM-10.0-37-HDR");
         assert_eq!(Family::of_name(&r.name), Some(Family::Em));
+    }
+
+    #[test]
+    fn wineland_skips_wow64_and_v3() {
+        let r = to_release(
+            Family::Wineland,
+            rel(
+                "wineland-11.0-20261119",
+                vec![
+                    asset("proton-wineland-11.0-20261119-x86_64.sha512sum", None),
+                    asset("proton-wineland-11.0-20261119-x86_64_wow64.tar.xz", None),
+                    asset("proton-wineland-11.0-20261119-x86_64.tar.xz", None),
+                    asset("proton-wineland-11.0-20261119-x86_64_v3.tar.xz", None),
+                ],
+            ),
+        )
+        .unwrap();
+        assert_eq!(r.archive_name, "proton-wineland-11.0-20261119-x86_64.tar.xz");
+        assert_eq!(r.name, "proton-wineland-11.0-20261119");
+        assert!(r.checksum_url.unwrap().ends_with("x86_64.sha512sum"));
+    }
+
+    #[test]
+    fn every_family_round_trips_its_names() {
+        let tags = [
+            (Family::Ge, "GE-Proton10-34"),
+            (Family::Cachyos, "cachyos-11.0-20261015-slr"),
+            (Family::Em, "EM-10.0-37-HDR"),
+            (Family::Umu, "UMU-Proton-11.0-2e"),
+            (Family::Twintail, "twintail-11.0-20261016-slr"),
+            (Family::Wineland, "wineland-11.0-20261119"),
+            (Family::Plop, "plop-11.0-20261014"),
+        ];
+        for (f, tag) in tags {
+            let name = f.runner_name(tag);
+            assert!(safe_name(&name), "{name}");
+            assert_eq!(Family::of_name(&name), Some(f), "{name}");
+        }
+        assert_eq!(Family::Twintail.cache_file(), "releases-twintail.json");
+        assert_eq!(Family::of_name("wine-ge-8-26"), None);
     }
 
     #[test]

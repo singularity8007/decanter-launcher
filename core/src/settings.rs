@@ -20,6 +20,9 @@ pub struct Settings {
     pub fps_cap: u32,
     /// Update a game automatically when Play is pressed.
     pub auto_update_games: bool,
+    /// When Play is pressed, move the game to the newest build of its Proton
+    /// family first (games with a pinned Proton are left alone).
+    pub auto_update_proton: bool,
     /// Minimize the window while a game runs.
     pub minimize_on_launch: bool,
 }
@@ -32,6 +35,7 @@ impl Default for Settings {
             performance_mode: true,
             fps_cap: 0,
             auto_update_games: true,
+            auto_update_proton: false,
             minimize_on_launch: true,
         }
     }

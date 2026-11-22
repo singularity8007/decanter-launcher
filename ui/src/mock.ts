@@ -32,6 +32,7 @@ const zzz: GameView = {
           voice: null,
           extra_args: "",
           env: {},
+          pin_runner: false,
         },
   installed_version: status === "not_installed" ? null : "3.3.0",
   latest_version: status === "update_available" ? "3.4.0" : "3.3.0",
@@ -52,26 +53,29 @@ const zzz: GameView = {
   last_played: "Nov 20, 2026",
   default_dir: "/home/hamza/.local/share/decanter/games/zzz",
   runner_installed: true,
+  default_runner: "GE-Proton10-34",
+  components: [],
 };
 
-const hidden = (id: GameView["id"], name: string, short: string): GameView => ({
+const other = (id: GameView["id"], name: string, short: string, version: string, background: string, icon: string | null = null): GameView => ({
   ...zzz,
   id,
   name,
   short,
-  visible: false,
   status: "not_installed",
   install: null,
   installed_version: null,
-  art: { background: null, video: null, icon: null },
+  latest_version: version,
+  art: { background, video: null, icon },
+  default_runner: id === "endfield" ? "proton-twintail-11.0-20261016-slr" : "GE-Proton10-34",
 });
 
 const games: GameView[] = [
   zzz,
-  hidden("hsr", "Honkai: Star Rail", "HSR"),
-  hidden("genshin", "Genshin Impact", "Genshin"),
-  hidden("wuwa", "Wuthering Waves", "WuWa"),
-  hidden("endfield", "Arknights: Endfield", "Endfield"),
+  other("hsr", "Honkai: Star Rail", "HSR", "4.7.0", "https://fastcdn.hoyoverse.com/static-resource-v2/2026/11/06/710a2f8876cd135cb631c8ea52b1341a_6140674871532348054.webp", "https://launcher-webstatic.hoyoverse.com/launcher-public/2026/05/14/4cc51f558225dba65cc875ecd642cfe2_3953701878866583418.png"),
+  other("genshin", "Genshin Impact", "Genshin", "7.2.0", "https://launcher-webstatic.hoyoverse.com/launcher-public/2026/10/30/f4188a48e3a68a52d00a3b28bb042e58_5159184125052880341.webp", "https://fastcdn.hoyoverse.com/static-resource-v2/2024/05/30/2e81b12276a2260c10133124e6ead00e_127960437642481968.png"),
+  other("wuwa", "Wuthering Waves", "WuWa", "3.8.0", "https://hw-pcdownload-qcloud.aki-game.net/launcher/game/50019/G153/steam/assets/background/20261106/bbaf7234687942a09b65cd69a2667ce6.webp"),
+  other("endfield", "Arknights: Endfield", "Endfield", "1.6.4", "https://gl-utils-public.hg-cdn.com/hg-utils/prod/eppcsuwqpaueijqk/YDUTE5gscDZ229CW/56/db/56dbf737e92191d5414241f5913792cf.webp"),
 ];
 
 const history = Array.from({ length: 120 }, (_, i) => {
@@ -100,7 +104,7 @@ function job(): JobView {
   }
 }
 
-const settings: Settings = { wayland: false, hud: false, performance_mode: true, fps_cap: 0, auto_update_games: true, minimize_on_launch: true };
+const settings: Settings = { wayland: false, hud: false, performance_mode: true, fps_cap: 0, auto_update_games: true, auto_update_proton: false, minimize_on_launch: true };
 
 const installed: InstalledRunner[] = [
   { name: "GE-Proton10-34", family: "ge", runtime: "sniper", problem: null, used_by: ["zzz"], newer: "GE-Proton11-12" },

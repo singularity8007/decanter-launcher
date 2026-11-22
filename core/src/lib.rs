@@ -4,6 +4,7 @@
 
 pub mod archive;
 pub mod backend;
+pub mod components;
 pub mod dxvk_conf;
 pub mod games;
 pub mod installs;

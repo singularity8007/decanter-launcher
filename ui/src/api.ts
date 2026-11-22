@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 export type GameId = "zzz" | "hsr" | "genshin" | "wuwa" | "endfield";
 export type Publisher = "hoyoverse" | "kuro" | "gryphline";
 export type GameStatus = "not_installed" | "incomplete" | "ready" | "update_available";
-export type Family = "ge" | "cachyos" | "em";
+export type Family = "ge" | "cachyos" | "em" | "umu" | "twintail" | "wineland" | "plop";
 export type Runtime = "sniper" | "steamrt4";
 export type JobKind = "install" | "play" | "runner" | "runtime";
 export type Phase = "preparing" | "verifying" | "downloading" | "installing" | "running";
@@ -31,6 +31,7 @@ export interface Install {
   voice: string | null;
   extra_args: string;
   env: Record<string, string>;
+  pin_runner: boolean;
 }
 
 export interface GameView {
@@ -53,6 +54,8 @@ export interface GameView {
   last_played: string | null;
   default_dir: string;
   runner_installed: boolean;
+  default_runner: string;
+  components: string[];
 }
 
 export type JobStatus =
@@ -124,6 +127,7 @@ export interface Settings {
   performance_mode: boolean;
   fps_cap: number;
   auto_update_games: boolean;
+  auto_update_proton: boolean;
   minimize_on_launch: boolean;
 }
 
@@ -133,6 +137,7 @@ export interface InstallOptions {
   voice?: string;
   extra_args?: string;
   env?: Record<string, string>;
+  pin_runner?: boolean;
 }
 
 export interface AppInfo {

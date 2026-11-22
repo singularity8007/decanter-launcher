@@ -4,6 +4,11 @@ import { api, DEFAULT_RUNNER, errorText, type Family, type FamilyView, type Inst
 import { bytes } from "../format";
 
 const RUNTIME_LABEL = { sniper: "SLR 3", steamrt4: "SLR 4" } as const;
+/** Builds the game profiles default to. */
+const RECOMMENDED: Record<string, string> = {
+  [DEFAULT_RUNNER]: "Recommended for ZZZ, HSR, Genshin, WuWa",
+  "proton-twintail-11.0-20261016-slr": "Recommended for Endfield",
+};
 const GAME_SHORT: Record<string, string> = { zzz: "ZZZ", hsr: "HSR", genshin: "Genshin", wuwa: "WuWa", endfield: "Endfield" };
 
 interface Props {
@@ -105,7 +110,7 @@ export default function ProtonManager({ job, act }: Props) {
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh
           </button>
         </div>
-        <div className="mb-4 flex gap-2">
+        <div className="mb-4 flex flex-wrap gap-2">
           {families.map((f) => (
             <button
               key={f.id}
@@ -133,7 +138,7 @@ export default function ProtonManager({ job, act }: Props) {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{r.name}</span>
-                      {r.name === DEFAULT_RUNNER && <Tag tone="wine">Recommended for ZZZ</Tag>}
+                      {RECOMMENDED[r.name] && <Tag tone="wine">{RECOMMENDED[r.name]}</Tag>}
                       {r.prerelease && <Tag tone="warn">Pre-release</Tag>}
                     </div>
                     <div className="mt-0.5 text-xs text-faint">

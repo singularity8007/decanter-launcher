@@ -73,6 +73,10 @@ pub struct GameInfo {
     pub visible: bool,
     /// Known gaps, shown to the player before installing.
     pub notes: &'static str,
+    /// Proton build a new install starts with.
+    pub default_runner: &'static str,
+    /// winetricks verbs the prefix needs before the first launch.
+    pub components: &'static [&'static str],
 }
 
 const NO_GRAPHICS: &[GraphicsOption] = &[];
@@ -95,6 +99,8 @@ static GAMES: [GameInfo; 5] = [
         default_graphics: "",
         visible: true,
         notes: "",
+        default_runner: crate::runners::DEFAULT_RUNNER,
+        components: &[],
     },
     GameInfo {
         id: GameId::Hsr,
@@ -107,8 +113,10 @@ static GAMES: [GameInfo; 5] = [
         steam_game_id: "0",
         graphics: NO_GRAPHICS,
         default_graphics: "",
-        visible: false,
-        notes: "Launching may still need the wintrust stub and vcrun2022 that Decanter doesn't set up yet.",
+        visible: true,
+        notes: "Not tested on Linux with Decanter yet. Twintail also drops in a closed-source DLL patch for this game; Decanter doesn't ship it, so if it won't start, that's the likely reason.",
+        default_runner: crate::runners::DEFAULT_RUNNER,
+        components: &["vcrun2022"],
     },
     GameInfo {
         id: GameId::Genshin,
@@ -121,8 +129,10 @@ static GAMES: [GameInfo; 5] = [
         steam_game_id: "0",
         graphics: NO_GRAPHICS,
         default_graphics: "",
-        visible: false,
+        visible: true,
         notes: "",
+        default_runner: crate::runners::DEFAULT_RUNNER,
+        components: &[],
     },
     GameInfo {
         id: GameId::Wuwa,
@@ -138,8 +148,10 @@ static GAMES: [GameInfo; 5] = [
             GraphicsOption { label: "DirectX 12", args: "-dx12 -krqlv=hd" },
         ],
         default_graphics: "-dx12 -krqlv=hd",
-        visible: false,
-        notes: "Launching may still need vcrun2022, corefonts and d3dcompiler_47 in the prefix.",
+        visible: true,
+        notes: "Not tested on Linux with Decanter yet. First launch installs vcrun2022, corefonts and d3dcompiler_47 into its prefix (needs cabextract).",
+        default_runner: crate::runners::DEFAULT_RUNNER,
+        components: &["vcrun2022", "corefonts", "d3dcompiler_47"],
     },
     GameInfo {
         id: GameId::Endfield,
@@ -155,8 +167,10 @@ static GAMES: [GameInfo; 5] = [
             GraphicsOption { label: "Vulkan", args: "-force-vulkan" },
         ],
         default_graphics: "-force-vulkan",
-        visible: false,
+        visible: true,
         notes: "Ships as ~130 GB of zip parts that are merged before extracting, so it needs about twice that free while installing. Updates re-download the full game for now.",
+        default_runner: "proton-twintail-11.0-20261016-slr",
+        components: &[],
     },
 ];
 

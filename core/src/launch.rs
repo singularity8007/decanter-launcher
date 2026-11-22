@@ -79,15 +79,36 @@ impl Launch<'_> {
         }
     }
 
-    /// Build (but don't run) the command.
+    /// Let Proton create (or upgrade) the prefix inside the runtime, without
+    /// starting the game: runs `wineboot` through the same chain and waits.
+    /// Needed before winetricks touches a fresh prefix.
+    pub fn init_prefix(&self) -> Result<()> {
+        prefix::ensure(&self.install.prefix).context("creating the Proton data folder")?;
+        if prefix::exists(&self.install.prefix) {
+            return Ok(());
+        }
+        let mut cmd = self.build("waitforexitandrun", "wineboot".into(), false, false);
+        log::info!("creating prefix: {cmd:?}");
+        let _ = cmd.stdout(Stdio::null()).stderr(Stdio::null()).status().context("starting Proton to create the prefix")?;
+        if !prefix::exists(&self.install.prefix) {
+            bail!("Proton didn't create a prefix in {}", self.install.prefix.display());
+        }
+        Ok(())
+    }
+
+    /// Build (but don't run) the command that starts the game.
     pub fn command(&self, verb: &str) -> Command {
+        self.build(verb, self.exe_arg(), true, self.settings.performance_mode)
+    }
+
+    fn build(&self, verb: &str, target: String, game_args: bool, performance: bool) -> Command {
         let install = self.install;
         let info = install.game.info();
         let pfx = install.prefix.join("pfx");
 
         // Hold the performance power profile for exactly as long as the game
         // runs. It's released automatically when the game exits.
-        let mut cmd = if self.settings.performance_mode && power_profiles_available() {
+        let mut cmd = if performance && power_profiles_available() {
             let mut c = Command::new("powerprofilesctl");
             c.args(["launch", "-p", "performance", "-r"])
                 .arg(format!("Playing {}", info.name))
@@ -104,9 +125,11 @@ impl Launch<'_> {
             .args(["SteamLaunch", "AppId=0", "--"])
             .arg(self.runner_dir.join("proton"))
             .arg(verb)
-            .arg(self.exe_arg());
-        cmd.args(install.graphics_args().split_whitespace());
-        cmd.args(install.extra_args.split_whitespace());
+            .arg(target);
+        if game_args {
+            cmd.args(install.graphics_args().split_whitespace());
+            cmd.args(install.extra_args.split_whitespace());
+        }
 
         cmd.current_dir(&install.dir);
         cmd.stdin(Stdio::null());
@@ -183,6 +206,7 @@ mod tests {
             voice: None,
             extra_args: String::new(),
             env: BTreeMap::new(),
+            pin_runner: false,
         }
     }
 

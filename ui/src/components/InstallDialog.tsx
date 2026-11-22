@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { AlertTriangle, FolderOpen, HardDrive } from "lucide-react";
-import { api, DEFAULT_RUNNER, type GameView, type InstalledRunner } from "../api";
+import { api, type GameView, type InstalledRunner } from "../api";
 import { bytes } from "../format";
 import Modal from "./Modal";
 
@@ -13,7 +13,7 @@ interface Props {
 
 export default function InstallDialog({ game, onClose, onInstall }: Props) {
   const [dir, setDir] = useState(game.default_dir);
-  const [runner, setRunner] = useState(DEFAULT_RUNNER);
+  const [runner, setRunner] = useState(game.default_runner);
   const [runners, setRunners] = useState<InstalledRunner[]>([]);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function InstallDialog({ game, onClose, onInstall }: Props) {
     if (typeof chosen === "string") setDir(chosen);
   };
 
-  const names = Array.from(new Set([DEFAULT_RUNNER, ...runners.filter((r) => r.runtime).map((r) => r.name)]));
+  const names = Array.from(new Set([game.default_runner, ...runners.filter((r) => r.runtime).map((r) => r.name)]));
 
   return (
     <Modal
@@ -70,7 +70,7 @@ export default function InstallDialog({ game, onClose, onInstall }: Props) {
           <select className="field" value={runner} onChange={(e) => setRunner(e.target.value)}>
             {names.map((n) => (
               <option key={n} value={n}>
-                {n === DEFAULT_RUNNER ? `${n} (recommended)` : n}
+                {n === game.default_runner ? `${n} (recommended)` : n}
               </option>
             ))}
           </select>

@@ -113,6 +113,7 @@ pub fn adopt(paths: &Paths, legacy: &Path) -> Option<(State, Settings, Report)> 
         voice: None,
         extra_args: String::new(),
         env: BTreeMap::new(),
+        pin_runner: false,
     };
     let state = State { installs: vec![install], selected: Some(GameId::Zzz) };
     Some((state, settings, report))

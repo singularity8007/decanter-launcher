@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
-import { Box, FlaskConical, FolderOpen, Info, Monitor, SlidersHorizontal } from "lucide-react";
+import { FolderOpen } from "lucide-react";
+import { BottleIcon, DecanterIcon, DialIcon, LayersIcon, LaunchIcon } from "./SectionIcons";
 import { api, type AppInfo, type JobView, type RuntimeView, type Settings } from "../api";
 import Toggle from "./Toggle";
 import ProtonManager from "./ProtonManager";
 
 type Section = "general" | "launch" | "proton" | "runtime" | "about";
 
-const SECTIONS: { id: Section; label: string; icon: React.ReactNode }[] = [
-  { id: "general", label: "General", icon: <SlidersHorizontal size={17} /> },
-  { id: "launch", label: "Game launch", icon: <Monitor size={17} /> },
-  { id: "proton", label: "Proton", icon: <FlaskConical size={17} /> },
-  { id: "runtime", label: "Steam Runtime", icon: <Box size={17} /> },
-  { id: "about", label: "About", icon: <Info size={17} /> },
+const SECTIONS: { id: Section; label: string; Icon: (p: { active?: boolean }) => React.ReactElement }[] = [
+  { id: "general", label: "General", Icon: DialIcon },
+  { id: "launch", label: "Game launch", Icon: LaunchIcon },
+  { id: "proton", label: "Proton", Icon: BottleIcon },
+  { id: "runtime", label: "Steam Runtime", Icon: LayersIcon },
+  { id: "about", label: "About", Icon: DecanterIcon },
 ];
 
 interface Props {
@@ -42,7 +43,9 @@ export default function SettingsPage({ settings, job, act, onSettings }: Props) 
               }`}
             >
               {section === s.id && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r bg-wine-400" />}
-              <span className={section === s.id ? "text-wine-300" : ""}>{s.icon}</span>
+              <span className={section === s.id ? "text-wine-200" : ""}>
+                <s.Icon active={section === s.id} />
+              </span>
               {s.label}
             </button>
           ))}
@@ -93,8 +96,16 @@ export default function SettingsPage({ settings, job, act, onSettings }: Props) 
           )}
 
           {section === "proton" && (
-            <Page title="Proton" subtitle="Install Proton builds and update them yourself. Each game picks its own in its settings.">
-              <ProtonManager job={job} act={act} />
+            <Page title="Proton" subtitle="Install Proton builds, and choose whether they update themselves. Each game picks its own in its settings.">
+              <Toggle
+                title="Update Proton automatically"
+                description="When you press Play, the game moves to the newest stable build of its Proton family first (the old build stays installed). Games set to keep their Proton are skipped. ZZZ ran choppy on GE-Proton11, so keep ZZZ on GE-Proton10-34 if that matters to you."
+                checked={settings.auto_update_proton}
+                onChange={(v) => set("auto_update_proton", v)}
+              />
+              <div className="pt-4">
+                <ProtonManager job={job} act={act} />
+              </div>
             </Page>
           )}
 
