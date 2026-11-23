@@ -135,7 +135,7 @@ export function installMock() {
   mockIPC((cmd) => {
     switch (cmd) {
       case "app_info":
-        return { version: "0.1.0", repo_url: "https://github.com/singularity800777/decanter-launcher", data_dir: "/home/hamza/.local/share/decanter" };
+        return { version: "0.1.0", repo_url: "https://github.com/singularity8007/decanter-launcher", data_dir: "/home/hamza/.local/share/decanter" };
       case "get_games":
         return games;
       case "get_selected":
