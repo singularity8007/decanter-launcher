@@ -9,6 +9,7 @@
 //! steamrt/steamrt3/    Steam Linux Runtime 3 "sniper"
 //! steamrt/steamrt4/    Steam Linux Runtime 4
 //! playtime/<slug>.json play time per game
+//! tools/               pinned helpers: winetricks, the process reaper
 //! cache/               release lists and other refetchable data
 //! installs.json        which games are installed where, with which Proton
 //! settings.json        launcher-wide settings
@@ -22,13 +23,11 @@ use std::path::PathBuf;
 #[derive(Debug, Clone)]
 pub struct Paths {
     pub root: PathBuf,
-    /// Steam's process reaper, shipped with the app (Tauri resource).
-    pub reaper: PathBuf,
 }
 
 impl Paths {
-    pub fn new(root: PathBuf, reaper: PathBuf) -> Self {
-        Self { root, reaper }
+    pub fn new(root: PathBuf) -> Self {
+        Self { root }
     }
 
     /// `$DECANTER_HOME`, else `$XDG_DATA_HOME/decanter`, else `~/.local/share/decanter`.

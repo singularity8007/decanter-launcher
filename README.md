@@ -74,8 +74,13 @@ ui/         React + TypeScript + Tailwind frontend
 
 ## License
 
-GPL-3.0-or-later. Decanter uses
-[fischl-rs](https://github.com/TwintailTeam/fischl-rs) by the Twintail team.
+GPL-3.0-or-later. See [LICENSE](LICENSE).
+
+Decanter uses [fischl-rs](https://github.com/TwintailTeam/fischl-rs) by the
+Twintail team. On first launch, it downloads the process reaper from
+[TwintailLauncher](https://github.com/TwintailTeam/TwintailLauncher) at a
+pinned commit and checks its SHA-256. The reaper isn't included in this
+repository.
 
 Decanter is not affiliated with HoYoverse, Kuro Games, Hypergryph/Gryphline
 or Valve. All game names and art belong to their owners.

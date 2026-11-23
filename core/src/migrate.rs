@@ -175,7 +175,7 @@ mod tests {
         fs::write(legacy.join("playtime.json"), r#"{"total_seconds":23487,"last_played":"2026-11-20"}"#).unwrap();
         fs::write(legacy.join("settings.json"), r#"{"runner_dir":"","hud":true,"dx12":true,"fps_cap":138}"#).unwrap();
 
-        let paths = Paths::new(tmp.path().join("data"), "/reaper".into());
+        let paths = Paths::new(tmp.path().join("data"));
         let (state, settings, report) = adopt(&paths, &legacy).unwrap();
         let zzz = state.get(GameId::Zzz).unwrap();
         assert_eq!(zzz.dir, game);
@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn nothing_to_adopt_without_a_finished_install() {
         let tmp = tempfile::tempdir().unwrap();
-        let paths = Paths::new(tmp.path().join("data"), "/reaper".into());
+        let paths = Paths::new(tmp.path().join("data"));
         assert!(adopt(&paths, &tmp.path().join("nope")).is_none());
     }
 }

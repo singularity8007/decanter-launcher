@@ -9,7 +9,6 @@ use decanter_core::settings::Settings;
 use decanter_core::{Backend, GameId, Paths};
 use serde::Serialize;
 use std::path::PathBuf;
-use tauri::path::BaseDirectory;
 use tauri::{Manager, State};
 
 const REPO_URL: &str = env!("CARGO_PKG_REPOSITORY");
@@ -179,11 +178,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let reaper = app
-                .path()
-                .resolve("resources/reaper", BaseDirectory::Resource)
-                .map_err(|e| format!("can't find the bundled reaper: {e}"))?;
-            let paths = Paths::new(Paths::default_root(), reaper);
+            let paths = Paths::new(Paths::default_root());
             log::info!("data folder: {}", paths.root.display());
             let backend = Backend::new(paths).map_err(|e| format!("{e:#}"))?;
             app.manage(backend);

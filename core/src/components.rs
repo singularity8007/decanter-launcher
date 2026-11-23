@@ -137,7 +137,7 @@ mod tests {
     #[ignore]
     fn live_winetricks() {
         let tmp = tempfile::tempdir().unwrap();
-        let paths = Paths::new(tmp.path().to_path_buf(), "/reaper".into());
+        let paths = Paths::new(tmp.path().to_path_buf());
         let p = winetricks(&crate::net::agent(), &paths).unwrap();
         assert!(fs::read_to_string(p).unwrap().contains("WINETRICKS_VERSION=20260125"));
     }

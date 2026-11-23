@@ -6,7 +6,7 @@
 //! ```
 //!
 //! The same chain Steam and TwintailLauncher use: the Steam Linux Runtime
-//! container the Proton build asks for, Steam's reaper to clean up leftover
+//! container the Proton build asks for, a process reaper to clean up leftover
 //! processes, and Proton itself.
 
 use crate::installs::Install;
@@ -44,7 +44,7 @@ impl Launch<'_> {
             (self.install.exe(), "the game's exe"),
             (self.runner_dir.join("proton"), "the Proton build"),
             (self.entry_point(), "the Steam Linux Runtime"),
-            (self.reaper.to_path_buf(), "Steam's reaper helper"),
+            (self.reaper.to_path_buf(), "the process reaper"),
         ];
         for (path, what) in checks {
             if !path.exists() {

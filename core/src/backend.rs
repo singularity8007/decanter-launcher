@@ -629,6 +629,10 @@ impl Backend {
             progress.set_label(format!("Getting {} (one time only)", runtime.label()));
             steamrt::ensure_present(&self.inner.agent, paths, runtime, progress)?;
         }
+        if !crate::reaper::ready(paths) {
+            progress.set_label("Getting the process reaper (one time only)".to_string());
+            crate::reaper::ensure(&self.inner.agent, paths)?;
+        }
         Ok((runner_dir, runtime))
     }
 
@@ -685,7 +689,7 @@ impl Backend {
                 install: &install,
                 runner_dir: runner_dir.clone(),
                 steamrt_dir: self.inner.paths.steamrt_dir(runtime),
-                reaper: &self.inner.paths.reaper,
+                reaper: &crate::reaper::path(&self.inner.paths),
                 settings: &settings,
             };
             progress.set_phase(Phase::Installing);
@@ -706,7 +710,7 @@ impl Backend {
             install: &install,
             runner_dir,
             steamrt_dir: self.inner.paths.steamrt_dir(runtime),
-            reaper: &self.inner.paths.reaper,
+            reaper: &crate::reaper::path(&self.inner.paths),
             settings: &settings,
         };
         let name = game.info().name;
@@ -855,7 +859,7 @@ mod tests {
     use super::*;
 
     fn backend(tmp: &tempfile::TempDir) -> Backend {
-        Backend::open(Paths::new(tmp.path().join("data"), "/reaper".into()), None).unwrap()
+        Backend::open(Paths::new(tmp.path().join("data")), None).unwrap()
     }
 
     #[test]
@@ -911,8 +915,8 @@ mod live {
     fn live_first_start() {
         let tmp = tempfile::tempdir().unwrap();
         let legacy = crate::migrate::legacy_root();
-        let reaper = legacy.join("bin/reaper");
-        let b = Backend::open(Paths::new(tmp.path().join("data"), reaper.clone()), Some(legacy.clone())).unwrap();
+        let b = Backend::open(Paths::new(tmp.path().join("data")), Some(legacy.clone())).unwrap();
+        let reaper = crate::reaper::ensure(&crate::net::agent(), b.paths()).unwrap();
         let zzz = b.games().into_iter().find(|g| g.id == GameId::Zzz).unwrap();
         println!("status={:?} version={:?} play_time={} runner_installed={}", zzz.status, zzz.installed_version, zzz.play_time, zzz.runner_installed);
         assert_eq!(zzz.status, GameStatus::Ready);
@@ -948,7 +952,7 @@ mod live {
     #[ignore]
     fn live_runner_lists() {
         let tmp = tempfile::tempdir().unwrap();
-        let b = Backend::open(Paths::new(tmp.path().join("data"), "/reaper".into()), None).unwrap();
+        let b = Backend::open(Paths::new(tmp.path().join("data")), None).unwrap();
         for f in Family::ALL {
             let list = b.runner_releases(f, true).unwrap();
             let verified = list.iter().filter(|r| r.release.sha256.is_some() || r.release.checksum_url.is_some()).count();

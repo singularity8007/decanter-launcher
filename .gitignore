@@ -23,3 +23,6 @@
 
 # Screen recordings
 *.webm
+
+# Process reaper: downloaded at runtime from TwintailLauncher (core/src/reaper.rs)
+/bin/

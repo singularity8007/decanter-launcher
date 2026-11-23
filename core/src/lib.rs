@@ -15,6 +15,7 @@ pub mod paths;
 pub mod playtime;
 pub mod prefix;
 pub mod progress;
+pub mod reaper;
 pub mod runners;
 pub mod settings;
 pub mod steamrt;
